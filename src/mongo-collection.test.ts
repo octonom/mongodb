@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import { Collection, MongoClient } from 'mongodb'
 
-import { initMongoCollection } from './mongo-collection'
+import { initMongoCollection, MongoCollection } from './mongo-collection'
 
 describe('MongoCollection', () => {
   let mongoClient: MongoClient
@@ -16,7 +16,7 @@ describe('MongoCollection', () => {
   after(() => mongoClient.close())
 
   interface Person {
-    id: string
+    _id: string
     name: string
   }
 
@@ -27,14 +27,13 @@ describe('MongoCollection', () => {
   })
 
   describe('insert()', () => {
-    let people
+    let people: MongoCollection<Person>
     beforeEach(async () => people = await initMongoCollection<Person>(mongoCollection))
 
     it('should insert a document', async () => {
-      const person: Person = { id: '1337', name: 'Darth Vader' }
-      await people.insertOne(person)
-      const dbDoc = await mongoCollection.findOne({ id: '1337' })
-      expect(dbDoc).to.eql(person)
+      await people.insertOne({ _id: '1337', name: 'Darth Vader' })
+      const dbDoc = await mongoCollection.findOne({ _id: '1337' })
+      expect(dbDoc).to.eql({ _id: '1337', name: 'Darth Vader' })
     })
   })
 })

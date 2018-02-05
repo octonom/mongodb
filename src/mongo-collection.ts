@@ -1,25 +1,35 @@
-import { Collection } from 'mongodb'
+import { Collection, Cursor } from 'mongodb'
 
 export interface InitMongoCollectionOptions<T> {
   toDbTransform? (doc: T): any
   fromDbTransform? (dbDoc: any): T
 }
 
-export async function initMongoCollection<T> (
+export interface MongoCollection<T> {
+  insertOne (doc: T): Promise<void>
+  findOne (filter: object): Promise<T | null>
+  find (filter: object): Cursor<T>
+}
+
+export async function initMongoCollection<T extends object> (
   collection: Collection,
   options: InitMongoCollectionOptions<T> = {}
-) {
-  const toDbTransform = options.toDbTransform || (doc => doc)
-  const fromDbTransform = options.fromDbTransform || (dbDoc => dbDoc as T)
+): Promise<MongoCollection<T>> {
+  const toDb = options.toDbTransform || (doc => doc)
+  const fromDb = options.fromDbTransform || (dbDoc => dbDoc as T)
 
   async function insertOne (doc: T) {
-    await collection.insertOne(toDbTransform(doc))
+    await collection.insertOne(toDb(doc), { forceServerObjectId: true })
   }
 
   async function findOne (filter: object) {
     const dbDoc = await collection.findOne(filter)
-    return dbDoc === null ? null : fromDbTransform(dbDoc)
+    return dbDoc === null ? null : fromDb(dbDoc)
   }
 
-  return { insertOne, findOne }
+  function find (filter: object) {
+    return collection.find(filter).map(fromDb) as Cursor<T>
+  }
+
+  return { insertOne, findOne, find }
 }
